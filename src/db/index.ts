@@ -1,7 +1,5 @@
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 
-export function createDb(databaseUrl: string) {
-  const sql = neon(databaseUrl);
-  return drizzle(sql);
-}
+const sql = neon(process.env.DATABASE_URL as string);
+export const db = drizzle(sql);
