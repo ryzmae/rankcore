@@ -1,16 +1,12 @@
 import { Hono } from "hono";
-import { db } from "./db";
-import { usersTable } from "./db/schema";
+import ScoreRouter from "./routes/score";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 app.get("/", async (c) => {
-  const res = await db
-    .insert(usersTable)
-    .values({ username: "test_user" })
-    .returning();
-
-  return c.json(res);
+  return c.json({ message: "Welcome to RankCore API!" });
 });
+
+app.route("/scores", ScoreRouter);
 
 export default app;

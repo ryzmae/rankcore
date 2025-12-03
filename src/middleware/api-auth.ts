@@ -1,9 +1,8 @@
 import { createMiddleware } from "hono/factory";
-import RedisClient from "../lib/Redis";
-import { db } from "../db";
+import { createRedis } from "../lib/Redis";
+import { createDb } from "../db";
 import { leaderboardsTable } from "../db/schema";
 import { eq } from "drizzle-orm";
-import { redis } from "bun";
 
 type ApiKeyMetadata = {
   appId: string;
@@ -29,12 +28,13 @@ export const authenticateApiKey = createMiddleware<{
   const redisKey = `auth:apikey:${apiKey}`;
   let metadata: ApiKeyMetadata | null = null;
 
-  const client = RedisClient.getInstance();
-  const cachedData = await client.get(redisKey);
+  const redis = createRedis(c.env.UPSTASH_REDIS_URL, c.env.UPSTASH_REDIS_TOKEN);
+  const cachedData = await redis.get<ApiKeyMetadata>(redisKey);
 
   if (cachedData) {
-    metadata = JSON.parse(cachedData) as ApiKeyMetadata;
+    metadata = cachedData;
   } else {
+    const db = createDb(c.env.DATABASE_URL);
     const result = await db
       .select()
       .from(leaderboardsTable)
@@ -46,7 +46,7 @@ export const authenticateApiKey = createMiddleware<{
         appId: result[0].id.toString(),
         rateLimit: 60,
       };
-      await redis.set(redisKey, JSON.stringify(metadata), "EX", 3600);
+      await redis.set(redisKey, metadata, { ex: 3600 });
     }
   }
 
